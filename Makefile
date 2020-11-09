@@ -1,0 +1,22 @@
+APPLICATION = airquality
+BOARD ?= esp32-wrover-kit
+QUIET ?= 1
+
+RIOTBASE = $(CURDIR)/../RIOT
+
+USEPKG += lvgl
+USEMODULE += lvgl_contrib
+USEMODULE += ili9341
+
+USEMODULE += bme280_i2c
+USEMODULE += gp2y10xx
+USEMODULE += saul_default
+
+USEMODULE += fmt
+
+CFLAGS += -DBMX280_PARAM_I2C_ADDR=\(0x76\)
+CFLAGS += -DGP2Y10XX_PARAM_ILED_PIN=GPIO_PIN\(0,22\)
+CFLAGS += -DGP2Y10XX_PARAM_VREF=\(3300\)
+CFLAGS += -DGP2Y10XX_PARAM_ADC_RES=\(ADC_RES_12BIT\)
+
+include $(RIOTBASE)/Makefile.include
