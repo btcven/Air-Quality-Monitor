@@ -3,7 +3,7 @@ Air Quality Monitor
 
 This is an Air Quality Monitor which will display data such as the temperature,
 pressure, and relative humidity on an screen using the [LittlevGL] graphics
-framework and the [RIOT]
+framework and the [RIOT] operating system.
 
 [LittlevGL]: https://lvgl.io/
 [RIOT]: https://riot-os.org/
