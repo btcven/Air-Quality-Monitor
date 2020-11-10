@@ -19,12 +19,7 @@ framework and the [RIOT] operating system.
 
 <p align="center">
   <img height="200px" src="./doc/ui.jpg">
-  <br>
-  <i>User Interface</i>
-
   <img height="200px" src="./doc/setup.jpg">
-  <br>
-  <i>Setup</i>
 </p>
 
 [LittlevGL]: https://lvgl.io/
