@@ -1,9 +1,31 @@
+<p align="center">
+  <a href="https://locha.io/">
+    <img height="200px" src="./doc/logo.png">
+  </a>
+</p>
+<p align="center">
+  <a href="https://locha.io/">Project Website</a> |
+  <a href="https://locha.io/donate">Donate</a> |
+  <a href="https://github.com/sponsors/rdymac">Sponsor</a> |
+  <a href="https://locha.io/buy">Buy</a>
+</p>
+
 Air Quality Monitor
 ===================
 
 This is an Air Quality Monitor which will display data such as the temperature,
 pressure, and relative humidity on an screen using the [LittlevGL] graphics
 framework and the [RIOT] operating system.
+
+<p align="center">
+  <img height="200px" src="./doc/ui.jpg">
+  <br>
+  <i>User Interface</i>
+
+  <img height="200px" src="./doc/setup.jpg">
+  <br>
+  <i>Setup</i>
+</p>
 
 [LittlevGL]: https://lvgl.io/
 [RIOT]: https://riot-os.org/
