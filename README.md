@@ -76,7 +76,7 @@ project that you can reference through the `RIOTBASE` environment variable, exam
 
 ```bash
 cd $HOME
-git clone https://github.com/RIOT-OS/RIOT/ -b 2020.10-branch
+git clone https://github.com/btcven/RIOT/ -b 2020_11_05-gp2y10xx
 export RIOTBASE=$HOME/RIOT
 ```
 
