@@ -9,6 +9,7 @@
 #include <string.h>
 
 #ifdef CPU_ESP32
+#include "board.h"
 #include "adc_arch.h"
 #include "gp2y10xx_params.h"
 #endif
@@ -30,6 +31,9 @@
 #include "thread.h"
 
 #define REFR_TIME          (600)
+#define LOCHA_COLOR        "F8931C"
+#define RIOT_R_COLOR       "BC1A29"
+#define RIOT_G_COLOR       "3FA687"
 
 static void airquality_create_humidity(lv_obj_t *parent);
 static void airquality_update_humidity(void);
@@ -142,7 +146,9 @@ static void airquality_update_humidity(void)
     size_t len = fmt_s16_dfp(str_hum, humidity.val[0], humidity.scale);
     str_hum[len] = '\0';
 
-    lv_label_set_text_fmt(humidity_label, "%s #FF0000 %s#", str_hum, phydat_unit_to_str(humidity.unit));
+    lv_label_set_text_fmt(humidity_label,
+                          "%s "LV_TXT_COLOR_CMD LOCHA_COLOR" %s"LV_TXT_COLOR_CMD,
+                          str_hum, phydat_unit_to_str(humidity.unit));
     lv_obj_realign(humidity_label);
 }
 
@@ -199,7 +205,9 @@ static void airquality_update_temperature(void)
     size_t len = fmt_s16_dfp(str_temp, temperature.val[0], temperature.scale);
     str_temp[len] = '\0';
 
-    lv_label_set_text_fmt(temperature_label, "%s #FF0000 %s#", str_temp,
+    lv_label_set_text_fmt(temperature_label,
+                          "%s "LV_TXT_COLOR_CMD LOCHA_COLOR" %s"LV_TXT_COLOR_CMD,
+                          str_temp,
                           phydat_unit_to_str(temperature.unit));
     lv_obj_realign(temperature_label);
 }
@@ -244,7 +252,8 @@ static void airquality_update_pressure(void)
     /* 1 hPa == 1 mbar */
     if (pressure.scale == 2 && pressure.unit == UNIT_PA) {
         lv_gauge_set_value(pressure_gauge, 0, pressure.val[0]);
-        lv_label_set_text_fmt(pressure_label, "%d #FF0000 mbar#",
+        lv_label_set_text_fmt(pressure_label,
+                              "%d "LV_TXT_COLOR_CMD LOCHA_COLOR" mbar"LV_TXT_COLOR_CMD,
                               pressure.val[0]);
     }
     else {
@@ -253,7 +262,9 @@ static void airquality_update_pressure(void)
         size_t len = fmt_s16_dfp(str_press, pressure.val[0], pressure.scale);
         str_press[len] = '\0';
 
-        lv_label_set_text_fmt(pressure_label, "%s %s", str_press,
+        lv_label_set_text_fmt(pressure_label,
+                              "%s "LV_TXT_COLOR_CMD LOCHA_COLOR"%s"LV_TXT_COLOR_CMD,
+                              str_press,
                               phydat_unit_to_str(pressure.unit));
     }
     lv_obj_realign(pressure_label);
@@ -288,7 +299,7 @@ static void airquality_create_particulate(lv_obj_t *parent)
     lv_gauge_set_range(particulate_gauge, 0, 1100);
     lv_gauge_set_critical_value(particulate_gauge, 500);
     lv_gauge_set_value(particulate_gauge, 0, 0);
-    lv_obj_set_size(particulate_gauge, 80, 80);
+    lv_obj_set_size(particulate_gauge, 84, 84);
     lv_obj_set_style_local_value_str(particulate_gauge, LV_GAUGE_PART_MAIN,
                                      LV_STATE_DEFAULT, "Particulate Matter");
     lv_obj_add_style(particulate_gauge, LV_GAUGE_PART_MAIN, &style_box);
@@ -307,7 +318,9 @@ static void airquality_update_particulate(void)
     }
 
     if (particulate.scale == -6 && particulate.unit == UNIT_GPM3) {
-        lv_label_set_text_fmt(particulate_label, "%d #FF0000 ug/m3#", particulate.val[0]);
+        lv_label_set_text_fmt(particulate_label,
+                              "%d "LV_TXT_COLOR_CMD LOCHA_COLOR" ug/m3"LV_TXT_COLOR_CMD,
+                              particulate.val[0]);
 
         lv_gauge_set_value(particulate_gauge, 0, particulate.val[0]);
     }
@@ -316,7 +329,9 @@ static void airquality_update_particulate(void)
         size_t len = fmt_s16_dfp(str_pm, particulate.val[0], particulate.scale);
         str_pm[len] = '\0';
 
-        lv_label_set_text_fmt(particulate_label, "%s #FF0000 %s#", str_pm,
+        lv_label_set_text_fmt(particulate_label,
+                              "%s "LV_TXT_COLOR_CMD LOCHA_COLOR" %s"LV_TXT_COLOR_CMD,
+                              str_pm,
                               phydat_unit_to_str(particulate.unit));
     }
     lv_obj_realign(particulate_label);
@@ -354,6 +369,16 @@ void airquality_create(void)
     airquality_create_pressure(win);
     airquality_create_particulate(win);
 
+    lv_obj_t *about_label = lv_label_create(win, NULL);
+    lv_label_set_recolor(about_label, true);
+    lv_label_set_text(about_label,
+                      "Brought to you by "
+                      LV_TXT_COLOR_CMD LOCHA_COLOR" Locha"LV_TXT_COLOR_CMD"\n"
+                      "Powered by "
+                      LV_TXT_COLOR_CMD RIOT_R_COLOR" R"LV_TXT_COLOR_CMD
+                      LV_TXT_COLOR_CMD RIOT_G_COLOR" iot"LV_TXT_COLOR_CMD
+                      " and LVGL");
+
     /* Refresh UI */
     airquality_task(NULL);
     refr_task = lv_task_create(airquality_task, REFR_TIME, LV_TASK_PRIO_LOW, NULL);
@@ -364,17 +389,13 @@ static char _stack[THREAD_STACKSIZE_SMALL];
 static void *_event_loop(void *args)
 {
     (void)args;
-    
-    if (particulate_sensor == NULL) {
-        return NULL;
-    }
 
     while (1) {
         if (saul_reg_read(particulate_sensor, &particulate) < 0) {
             LOG_ERROR("Couldn't read particulate sensor\n");
         }
 
-        xtimer_usleep(200 * US_PER_MS);
+        xtimer_msleep(200);
     }
 
     return NULL;
@@ -399,15 +420,15 @@ int main(void)
     /* Initialize the concrete display driver */
     ili9341_init(&s_disp_dev, &ili9341_params[0]);
 
-    LOG_INFO("Initializing LittleVGL library\n");
+    LOG_INFO("Initializing LVGL library\n");
     /* Initialize lvgl with the generic display and touch drivers */
     lvgl_init(&s_screen);
 
     /* Dark theme */
 #if LV_USE_THEME_MATERIAL
-    LV_THEME_DEFAULT_INIT(lv_theme_get_color_primary(),
+    LV_THEME_DEFAULT_INIT(lv_color_hex(0xf8931c),
                           lv_theme_get_color_secondary(),
-                          LV_THEME_MATERIAL_FLAG_LIGHT,
+                          LV_THEME_MATERIAL_FLAG_DARK,
                           lv_theme_get_font_small(),
                           lv_theme_get_font_normal(),
                           lv_theme_get_font_subtitle(),
