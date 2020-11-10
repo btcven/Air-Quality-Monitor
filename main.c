@@ -30,10 +30,20 @@
 
 #include "thread.h"
 
-#define REFR_TIME          (600)
-#define LOCHA_COLOR        "F8931C"
-#define RIOT_R_COLOR       "BC1A29"
-#define RIOT_G_COLOR       "3FA687"
+#define REFR_TIME       (600)
+#define LOCHA_COLOR     "F8931C"
+#define RIOT_R_COLOR    "BC1A29"
+#define RIOT_G_COLOR    "3FA687"
+
+#define HUM_LIMIT       100     /**< % maximum limit */
+#define TEMP_LIMIT      100     /**< celsius maximum limit */
+#define TEMP_CRIT       70      /**< celsius critical limit */
+#define PRESS_LIMIT     1089    /**< hPa (mbar) maximum limit */
+#define PRESS_CRIT      1000    /**< hPa (mbar) critical limit */
+#define PM_LIMIT        1100    /**< ug/m3 maximum limit */
+#define PM_CRIT         500     /**< ug/m3 critical limit */
+
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
 
 static void airquality_create_humidity(lv_obj_t *parent);
 static void airquality_update_humidity(void);
@@ -72,8 +82,6 @@ static phydat_t particulate;
 
 static lv_style_t style_box;
 
-#define PA_PER_MBAR (100U)
-
 /* C doesn't have a sane pow function that uses only integers, and us, the poor
  * men have to write our own, less tested alternative :-).
  *
@@ -107,7 +115,7 @@ static void airquality_create_humidity(lv_obj_t *parent)
     humidity_lmeter = lv_linemeter_create(parent, NULL);
     lv_obj_set_size(humidity_lmeter, 80, 80);
     lv_obj_add_style(humidity_lmeter, LV_LINEMETER_PART_MAIN, &style_box);
-    lv_linemeter_set_range(humidity_lmeter, 0, 100);
+    lv_linemeter_set_range(humidity_lmeter, 0, HUM_LIMIT);
     lv_linemeter_set_value(humidity_lmeter, 0);
     lv_linemeter_set_scale(humidity_lmeter, 240, 11);
 
@@ -129,18 +137,18 @@ static void airquality_update_humidity(void)
         return;
     }
 
-    /* update humidity linemeter */
-    int32_t hum_val = 0;
-    if (humidity.scale > 0) {
-        hum_val = humidity.val[0] * _poor_man_pow10((unsigned)humidity.scale);
+    if (humidity.unit == UNIT_PERCENT) {
+        /* convert to a value from 0 to 100 */
+        int32_t hum_val = 0;
+        if (humidity.scale > 0) {
+            hum_val = humidity.val[0] * _poor_man_pow10((unsigned)humidity.scale);
+        }
+        else if (humidity.scale < 0) {
+            hum_val = humidity.val[0] / _poor_man_pow10((unsigned)-humidity.scale);
+        }
+        hum_val = MIN(hum_val, HUM_LIMIT);
+        lv_linemeter_set_value(humidity_lmeter, hum_val);
     }
-    else if (humidity.scale < 0) {
-        hum_val = humidity.val[0] / _poor_man_pow10((unsigned)-humidity.scale);
-    }
-    if (hum_val > 100) {
-        hum_val = 100;
-    }
-    lv_linemeter_set_value(humidity_lmeter, hum_val);
 
     char str_hum[16];
     size_t len = fmt_s16_dfp(str_hum, humidity.val[0], humidity.scale);
@@ -163,8 +171,8 @@ static void airquality_create_temperature(lv_obj_t *parent)
 
     temperature_gauge = lv_gauge_create(parent, NULL);
     lv_gauge_set_scale(temperature_gauge, 240, 21, 0);
-    lv_gauge_set_range(temperature_gauge, 0, 100);
-    lv_gauge_set_critical_value(temperature_gauge, 70);
+    lv_gauge_set_range(temperature_gauge, 0, TEMP_LIMIT);
+    lv_gauge_set_critical_value(temperature_gauge, TEMP_CRIT);
     lv_gauge_set_value(temperature_gauge, 0, 0);
     lv_obj_set_size(temperature_gauge, 80, 80);
     lv_obj_set_style_local_value_str(temperature_gauge, LV_GAUGE_PART_MAIN,
@@ -189,17 +197,19 @@ static void airquality_update_temperature(void)
         return;
     }
 
-    int temp_val = 0;
-    if (temperature.scale > 0) {
-        temp_val = temperature.val[0] * _poor_man_pow10((unsigned)temperature.scale);
+    /* only bother to update the gauge if it's celsius */
+    if (temperature.unit == UNIT_TEMP_C) {
+        /* convert to a value between 0 and TEMP_MAX */
+        int temp_val = 0;
+        if (temperature.scale > 0) {
+            temp_val = temperature.val[0] * _poor_man_pow10((unsigned)temperature.scale);
+        }
+        else if (temperature.scale < 0) {
+            temp_val = temperature.val[0] / _poor_man_pow10((unsigned)-temperature.scale);
+        }
+        temp_val = MIN(temp_val, TEMP_CRIT);
+        lv_gauge_set_value(temperature_gauge, 0, temp_val);
     }
-    else if (temperature.scale < 0) {
-        temp_val = temperature.val[0] / _poor_man_pow10((unsigned)-temperature.scale);
-    }
-    if (temp_val > 100) {
-        temp_val = 100;
-    }
-    lv_gauge_set_value(temperature_gauge, 0, temp_val);
 
     char str_temp[32];
     size_t len = fmt_s16_dfp(str_temp, temperature.val[0], temperature.scale);
@@ -223,8 +233,8 @@ static void airquality_create_pressure(lv_obj_t *parent)
 
     pressure_gauge = lv_gauge_create(parent, NULL);
     lv_gauge_set_scale(pressure_gauge, 240, 21, 0);
-    lv_gauge_set_range(pressure_gauge, 0, 1089);
-    lv_gauge_set_critical_value(pressure_gauge, 1000);
+    lv_gauge_set_range(pressure_gauge, 0, PRESS_LIMIT);
+    lv_gauge_set_critical_value(pressure_gauge, PRESS_CRIT);
     lv_gauge_set_value(pressure_gauge, 0, 0);
     lv_obj_set_size(pressure_gauge, 80, 80);
     lv_obj_set_style_local_value_str(pressure_gauge, LV_GAUGE_PART_MAIN,
@@ -269,6 +279,7 @@ static void airquality_update_pressure(void)
     }
     lv_obj_realign(pressure_label);
 
+    /* we only bother updating the gauge if the units are pascals, otherwise ignore it */
     if (pressure.unit == UNIT_PA) {
         int val = 0;
         if (pressure.scale > 0) {
@@ -277,11 +288,10 @@ static void airquality_update_pressure(void)
         else if (pressure.scale < 0) {
             val = pressure.val[0] / _poor_man_pow10((unsigned)-pressure.scale);
         }
-        if (val > (int)(1089 * _poor_man_pow10(2))) {
-            val = 1089 * _poor_man_pow10(2);
-        }
-        /* convert to hPa/mbar */
-        lv_gauge_set_value(pressure_gauge, 0, val / _poor_man_pow10(2));
+        /* convert to hPa (or mbar simply) */
+        val /= _poor_man_pow10(2);
+        val = MIN(val, PRESS_LIMIT);
+        lv_gauge_set_value(pressure_gauge, 0, val);
     }
 }
 
@@ -296,10 +306,10 @@ static void airquality_create_particulate(lv_obj_t *parent)
 
     particulate_gauge = lv_gauge_create(parent, NULL);
     lv_gauge_set_scale(particulate_gauge, 240, 21, 0);
-    lv_gauge_set_range(particulate_gauge, 0, 1100);
-    lv_gauge_set_critical_value(particulate_gauge, 500);
+    lv_gauge_set_range(particulate_gauge, 0, PM_LIMIT);
+    lv_gauge_set_critical_value(particulate_gauge, PM_CRIT);
     lv_gauge_set_value(particulate_gauge, 0, 0);
-    lv_obj_set_size(particulate_gauge, 84, 84);
+    lv_obj_set_size(particulate_gauge, 80, 80);
     lv_obj_set_style_local_value_str(particulate_gauge, LV_GAUGE_PART_MAIN,
                                      LV_STATE_DEFAULT, "Particulate Matter");
     lv_obj_add_style(particulate_gauge, LV_GAUGE_PART_MAIN, &style_box);
@@ -322,7 +332,8 @@ static void airquality_update_particulate(void)
                               "%d "LV_TXT_COLOR_CMD LOCHA_COLOR" ug/m3"LV_TXT_COLOR_CMD,
                               particulate.val[0]);
 
-        lv_gauge_set_value(particulate_gauge, 0, particulate.val[0]);
+        int32_t pm_val = MIN(particulate.val[0], PM_LIMIT);
+        lv_gauge_set_value(particulate_gauge, 0, pm_val);
     }
     else {
         char str_pm[32];
@@ -440,7 +451,7 @@ int main(void)
 
     /* Create Particulate Matter thread */
     thread_create(_stack, sizeof(_stack), THREAD_PRIORITY_MAIN - 1,
-                  THREAD_CREATE_STACKTEST, _event_loop, NULL, "gp2y10xx");
+                  THREAD_CREATE_STACKTEST, _event_loop, NULL, "sensors");
 
 
     return 0;
