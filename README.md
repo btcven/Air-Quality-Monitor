@@ -7,7 +7,6 @@
   <a href="https://locha.io/">Project Website</a> |
   <a href="https://locha.io/donate">Donate</a> |
   <a href="https://github.com/sponsors/rdymac">Sponsor</a> |
-  <a href="https://locha.io/buy">Buy</a>
 </p>
 
 Air Quality Monitor
